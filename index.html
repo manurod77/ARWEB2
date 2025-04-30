@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR WebXR App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        #ar-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .ui-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 100;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        
+        button {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 30px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            backdrop-filter: blur(5px);
+            min-width: 100px;
+        }
+        
+        button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        
+        .control-panel {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            width: 100%;
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+        
+        .control-group {
+            margin-bottom: 10px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="range"] {
+            flex-grow: 1;
+            height: 5px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .value-display {
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        .model-select {
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .model-select option {
+            background-color: #333;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .capture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .capture-image {
+            max-width: 90%;
+            max-height: 70%;
+            border: 3px solid white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .capture-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ar-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 150;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            color: white;
+        }
+        
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ar-canvas"></canvas>
+    
+    <div id="loading-screen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>Cargando recursos...</p>
+    </div>
+    
+    <div id="ar-message" class="ar-message hidden">
+        <p>Por favor, mueve tu dispositivo para detectar superficies.</p>
+    </div>
+    
+    <div id="ui-container" class="ui-container">
+        <div class="button-container">
+            <button id="ar-button">Iniciar AR</button>
+            <button id="capture-button" class="hidden">Capturar</button>
+            <button id="toggle-controls-button" class="hidden">Ocultar Controles</button>
+        </div>
+        
+        <div id="control-panel" class="control-panel hidden">
+            <select id="model-select" class="model-select">
+                <option value="cube">Cubo</option>
+                <option value="sphere">Esfera</option>
+                <option value="torus">Toroide</option>
+            </select>
+            
+            <div class="control-group">
+                <label>Escala</label>
+                <div class="slider-container">
+                    <input type="range" id="scale-slider" min="0.5" max="3" step="0.1" value="1">
+                    <span id="scale-value" class="value-display">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Rotación X</label>
+                <div class="slider-container">
+                    <input type="range" id="rotate-x-slider" min="0" max="6.28" step="0.1" value="0">
+                    <span id="rotate-x-value" class="value-display">0.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Rotación Y</label>
+                <div class="slider-container">
+                    <input type="range" id="rotate-y-slider" min="0" max="6.28" step="0.1" value="0">
+                    <span id="rotate-y-value" class="value-display">0.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Rotación Z</label>
+                <div class="slider-container">
+                    <input type="range" id="rotate-z-slider" min="0" max="6.28" step="0.1" value="0">
+                    <span id="rotate-z-value" class="value-display">0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="capture-overlay" class="capture-overlay hidden">
+        <img id="capture-image" class="capture-image">
+        <div class="capture-buttons">
+            <button id="share-button">Compartir</button>
+            <button id="close-capture-button">Cerrar</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+    <script>
+        // Variables globales
+        let camera, scene, renderer;
+        let controller, reticle;
+        let currentModel, hitTestSource, hitTestSourceRequested = false;
+        let isControlsVisible = true;
+        
+        // Estado de la aplicación
+        const appState = {
+            isARMode: false,
+            selectedModel: 'cube',
+            scale: 1.0,
+            rotationX: 0,
+            rotationY: 0,
+            rotationZ: 0,
+            modelPlaced: false
+        };
+        
+        // Cache para los modelos
+        const modelCache = {
+            cube: null,
+            sphere: null,
+            torus: null
+        };
+        
+        // Elementos de la UI
+        const ui = {
+            arButton: document.getElementById('ar-button'),
+            captureButton: document.getElementById('capture-button'),
+            toggleControlsButton: document.getElementById('toggle-controls-button'),
+            controlPanel: document.getElementById('control-panel'),
+            modelSelect: document.getElementById('model-select'),
+            scaleSlider: document.getElementById('scale-slider'),
+            scaleValue: document.getElementById('scale-value'),
+            rotateXSlider: document.getElementById('rotate-x-slider'),
+            rotateXValue: document.getElementById('rotate-x-value'),
+            rotateYSlider: document.getElementById('rotate-y-slider'),
+            rotateYValue: document.getElementById('rotate-y-value'),
+            rotateZSlider: document.getElementById('rotate-z-slider'),
+            rotateZValue: document.getElementById('rotate-z-value'),
+            captureOverlay: document.getElementById('capture-overlay'),
+            captureImage: document.getElementById('capture-image'),
+            shareButton: document.getElementById('share-button'),
+            closeCaptureButton: document.getElementById('close-capture-button'),
+            arMessage: document.getElementById('ar-message'),
+            loadingScreen: document.getElementById('loading-screen')
+        };
+        
+        // Inicializar la aplicación
+        function init() {
+            // Crear la escena
+            scene = new THREE.Scene();
+            
+            // Crear la cámara
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+            
+            // Crear la luz ambiental
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            // Crear la luz direccional
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 5, 0);
+            scene.add(directionalLight);
+            
+            // Crear el renderer
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('ar-canvas'),
+                alpha: true,
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.xr.enabled = true;
+            
+            // Crear el reticle
+            const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
+            const reticleMaterial = new THREE.MeshBasicMaterial();
+            reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
+            reticle.matrixAutoUpdate = false;
+            reticle.visible = false;
+            scene.add(reticle);
+            
+            // Precargar los modelos
+            loadModels();
+            
+            // Configurar el controlador
+            setupARButton();
+            
+            // Configurar los eventos de la UI
+            setupUIEvents();
+            
+            // Iniciar el bucle de renderizado
+            renderer.setAnimationLoop(render);
+            
+            // Configurar el evento de redimensión
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Cargar los modelos
+        function loadModels() {
+            // Crear el cubo
+            const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x00ff00,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            modelCache.cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            
+            // Crear la esfera
+            const sphereGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+            const sphereMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff0000,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            modelCache.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            
+            // Crear el toroide
+            const torusGeometry = new THREE.TorusGeometry(0.15, 0.05, 16, 100);
+            const torusMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x0000ff,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            modelCache.torus = new THREE.Mesh(torusGeometry, torusMaterial);
+            
+            // Ocultar la pantalla de carga
+            setTimeout(() => {
+                ui.loadingScreen.classList.add('hidden');
+            }, 1000);
+        }
+        
+        // Configurar el botón de AR
+        function setupARButton() {
+            ui.arButton.addEventListener('click', () => {
+                if (navigator.xr) {
+                    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                        if (supported) {
+                            startAR();
+                        } else {
+                            alert('La Realidad Aumentada no está soportada en este dispositivo.');
+                        }
+                    });
+                } else {
+                    alert('WebXR no está soportado en este navegador.');
+                }
+            });
+        }
+        
+        // Iniciar la sesión de AR
+        function startAR() {
+            navigator.xr.requestSession('immersive-ar', {
+                requiredFeatures: ['hit-test', 'dom-overlay'],
+                domOverlay: { root: document.getElementById('ui-container') }
+            }).then((session) => {
+                renderer.xr.setReferenceSpaceType('local');
+                renderer.xr.setSession(session);
+                
+                ui.arButton.classList.add('hidden');
+                ui.captureButton.classList.remove('hidden');
+                ui.toggleControlsButton.classList.remove('hidden');
+                ui.controlPanel.classList.remove('hidden');
+                ui.arMessage.classList.remove('hidden');
+                
+                appState.isARMode = true;
+                
+                session.addEventListener('end', () => {
+                    ui.arButton.classList.remove('hidden');
+                    ui.captureButton.classList.add('hidden');
+                    ui.toggleControlsButton.classList.add('hidden');
+                    ui.controlPanel.classList.add('hidden');
+                    ui.arMessage.classList.add('hidden');
+                    
+                    appState.isARMode = false;
+                    appState.modelPlaced = false;
+                    
+                    if (currentModel) {
+                        scene.remove(currentModel);
+                        currentModel = null;
+                    }
+                });
+                
+                session.addEventListener('select', onSelect);
+            });
+        }
+        
+        // Configurar los eventos de la UI
+        function setupUIEvents() {
+            // Selección de modelo
+            ui.modelSelect.addEventListener('change', (e) => {
+                appState.selectedModel = e.target.value;
+                if (appState.modelPlaced && currentModel) {
+                    updateModel();
+                }
+            });
+            
+            // Control de escala
+            ui.scaleSlider.addEventListener('input', (e) => {
+                appState.scale = parseFloat(e.target.value);
+                ui.scaleValue.textContent = appState.scale.toFixed(1);
+                if (currentModel) {
+                    currentModel.scale.setScalar(appState.scale);
+                }
+            });
+            
+            // Control de rotación X
+            ui.rotateXSlider.addEventListener('input', (e) => {
+                appState.rotationX = parseFloat(e.target.value);
+                ui.rotateXValue.textContent = appState.rotationX.toFixed(1);
+                if (currentModel) {
+                    currentModel.rotation.x = appState.rotationX;
+                }
+            });
+            
+            // Control de rotación Y
+            ui.rotateYSlider.addEventListener('input', (e) => {
+                appState.rotationY = parseFloat(e.target.value);
+                ui.rotateYValue.textContent = appState.rotationY.toFixed(1);
+                if (currentModel) {
+                    currentModel.rotation.y = appState.rotationY;
+                }
+            });
+            
+            // Control de rotación Z
+            ui.rotateZSlider.addEventListener('input', (e) => {
+                appState.rotationZ = parseFloat(e.target.value);
+                ui.rotateZValue.textContent = appState.rotationZ.toFixed(1);
+                if (currentModel) {
+                    currentModel.rotation.z = appState.rotationZ;
+                }
+            });
+            
+            // Botón de captura
+            ui.captureButton.addEventListener('click', captureScene);
+            
+            // Botón para mostrar/ocultar controles
+            ui.toggleControlsButton.addEventListener('click', toggleControls);
+            
+            // Botones de la captura
+            ui.shareButton.addEventListener('click', shareCapture);
+            ui.closeCaptureButton.addEventListener('click', closeCapture);
+        }
+        
+        // Actualizar el modelo en la escena
+        function updateModel() {
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+            
+            currentModel = modelCache[appState.selectedModel].clone();
+            currentModel.scale.setScalar(appState.scale);
+            currentModel.rotation.set(appState.rotationX, appState.rotationY, appState.rotationZ);
+            
+            scene.add(currentModel);
+        }
+        
+        // Evento de selección en AR
+        function onSelect() {
+            if (reticle.visible) {
+                if (!appState.modelPlaced) {
+                    updateModel();
+                    
+                    // Establecer la posición del modelo en la posición del reticle
+                    currentModel.position.setFromMatrixPosition(reticle.matrix);
+                    appState.modelPlaced = true;
+                    
+                    // Ocultar el mensaje de AR
+                    ui.arMessage.classList.add('hidden');
+                } else {
+                    // Si ya hay un modelo, actualizamos su posición
+                    currentModel.position.setFromMatrixPosition(reticle.matrix);
+                }
+            }
+        }
+        
+        // Capturar la escena
+        function captureScene() {
+            // Ocultar los controles temporalmente para la captura
+            const controlsVisible = isControlsVisible;
+            if (controlsVisible) {
+                ui.controlPanel.classList.add('hidden');
+                ui.toggleControlsButton.textContent = 'Mostrar Controles';
+            }
+            
+            // Pequeña espera para asegurar que la UI se actualice
+            setTimeout(() => {
+                // Capturar la imagen
+                renderer.domElement.toBlob((blob) => {
+                    const imageUrl = URL.createObjectURL(blob);
+                    ui.captureImage.src = imageUrl;
+                    ui.captureOverlay.classList.remove('hidden');
+                    
+                    // Restaurar los controles si estaban visibles
+                    if (controlsVisible) {
+                        ui.controlPanel.classList.remove('hidden');
+                        ui.toggleControlsButton.textContent = 'Ocultar Controles';
+                    }
+                });
+            }, 100);
+        }
+        
+        // Compartir la captura
+        function shareCapture() {
+            // Convertir la imagen a blob
+            fetch(ui.captureImage.src)
+                .then(res => res.blob())
+                .then(blob => {
+                    // Crear el objeto de archivo
+                    const file = new File([blob], 'ar-capture.png', { type: 'image/png' });
+                    
+                    // Verificar si el navegador soporta la API de compartir
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'Mi captura de AR',
+                            files: [file]
+                        }).catch(error => {
+                            console.error('Error al compartir:', error);
+                            fallbackShare(ui.captureImage.src);
+                        });
+                    } else {
+                        fallbackShare(ui.captureImage.src);
+                    }
+                });
+        }
+        
+        // Método alternativo para compartir
+        function fallbackShare(imageUrl) {
+            // Crear un enlace de descarga
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = 'ar-capture.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Cerrar la vista de captura
+        function closeCapture() {
+            ui.captureOverlay.classList.add('hidden');
+        }
+        
+        // Mostrar/ocultar los controles
+        function toggleControls() {
+            isControlsVisible = !isControlsVisible;
+            
+            if (isControlsVisible) {
+                ui.controlPanel.classList.remove('hidden');
+                ui.toggleControlsButton.textContent = 'Ocultar Controles';
+            } else {
+                ui.controlPanel.classList.add('hidden');
+                ui.toggleControlsButton.textContent = 'Mostrar Controles';
+            }
+        }
+        
+        // Manejar el redimensionamiento de la ventana
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Función de renderizado
+        function render(timestamp, frame) {
+            if (frame) {
+                const referenceSpace = renderer.xr.getReferenceSpace();
+                const session = renderer.xr.getSession();
+                
+                if (!hitTestSourceRequested) {
+                    session.requestReferenceSpace('viewer').then((referenceSpace) => {
+                        session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                            hitTestSource = source;
+                        });
+                    });
+                    
+                    hitTestSourceRequested = true;
+                }
+                
+                if (hitTestSource) {
+                    const hitTestResults = frame.getHitTestResults(hitTestSource);
+                    
+                    if (hitTestResults.length > 0) {
+                        const hit = hitTestResults[0];
+                        reticle.visible = true;
+                        reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                        
+                        // Ocultar el mensaje de AR cuando detecte una superficie
+                        if (ui.arMessage.classList.contains('hidden') === false) {
+                            ui.arMessage.classList.add('hidden');
+                        }
+                    } else {
+                        reticle.visible = false;
+                    }
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Iniciar la aplicación cuando se carga la página
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
