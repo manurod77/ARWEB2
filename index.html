@@ -2,673 +2,1364 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR WebXR App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aplicación AR con WebXR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: Arial, sans-serif;
         }
         
         body {
             overflow: hidden;
-            font-family: Arial, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
         }
         
         #ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .ui-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .ar-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        
+        .ar-button:active {
+            transform: scale(0.95);
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 90vw;
+            transition: all 0.3s ease;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin: 0 5px;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #555;
+            text-align: center;
+        }
+        
+        .control-button {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-button:active {
+            background-color: #ddd;
+        }
+        
+        .toggle-ui-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .toggle-ui-button:active {
+            transform: scale(0.95);
+        }
+        
+        .toggle-ui-icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .camera-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border: 3px solid #007BFF;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        
+        .camera-button:active {
+            transform: scale(0.95);
+            background-color: #f0f0f0;
+        }
+        
+        .camera-icon {
+            width: 28px;
+            height: 28px;
+        }
+        
+        #capture-preview {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         
-        .ui-container {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+        #preview-image {
+            max-width: 90%;
+            max-height: 70%;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .preview-controls {
+            display: flex;
+            margin-top: 20px;
+        }
+        
+        .preview-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .preview-button.cancel {
+            background-color: #e74c3c;
+        }
+        
+        .preview-button:active {
+            transform: scale(0.95);
+        }
+        
+        .preview-icon {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+        }
+        
+        .filters-container {
+            display: flex;
+            overflow-x: auto;
+            margin: 15px 0;
+            padding: 10px 0;
+            width: 90%;
+        }
+        
+        .filter-option {
             display: flex;
             flex-direction: column;
             align-items: center;
-            z-index: 100;
-            width: 90%;
-            max-width: 500px;
+            margin: 0 8px;
+            cursor: pointer;
         }
         
-        .button-container {
+        .filter-thumbnail {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 5px;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .filter-thumbnail.active {
+            border-color: #007BFF;
+        }
+        
+        .filter-label {
+            font-size: 12px;
+            color: white;
+        }
+        
+        /* Tooltip styles */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+        
+        /* Tutorial styles */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 200;
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-        
-        button {
-            padding: 12px 15px;
-            border: none;
-            border-radius: 30px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            backdrop-filter: blur(5px);
-            min-width: 100px;
-        }
-        
-        button:hover {
-            background-color: rgba(0, 0, 0, 0.9);
-        }
-        
-        .control-panel {
-            background-color: rgba(0, 0, 0, 0.7);
-            border-radius: 15px;
-            padding: 15px;
-            width: 100%;
-            color: white;
-            backdrop-filter: blur(5px);
-        }
-        
-        .control-group {
-            margin-bottom: 10px;
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .slider-container {
-            display: flex;
             align-items: center;
-            gap: 10px;
         }
         
-        input[type="range"] {
-            flex-grow: 1;
-            height: 5px;
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
+        .tutorial-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
         }
         
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
+        .tutorial-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
         }
         
-        .value-display {
-            min-width: 35px;
-            text-align: center;
+        .tutorial-step {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
         }
         
-        .model-select {
-            width: 100%;
-            padding: 8px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 5px;
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background-color: #007BFF;
             color: white;
-            margin-bottom: 10px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 15px;
+            flex-shrink: 0;
         }
         
-        .model-select option {
-            background-color: #333;
+        .step-text {
+            font-size: 14px;
+            color: #555;
         }
         
-        .hidden {
-            display: none;
+        .tutorial-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+            align-self: center;
         }
         
-        .capture-overlay {
+        /* Loading indicator */
+        .loading-indicator {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 200;
-        }
-        
-        .capture-image {
-            max-width: 90%;
-            max-height: 70%;
-            border: 3px solid white;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        }
-        
-        .capture-buttons {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .ar-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 150;
-        }
-        
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 300;
-            color: white;
         }
         
         .spinner {
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 5px solid white;
             width: 50px;
             height: 50px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        .loading-text {
+            color: white;
+            margin-top: 15px;
+            font-size: 16px;
         }
         
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 <body>
     <canvas id="ar-canvas"></canvas>
     
-    <div id="loading-screen" class="loading-screen">
+    <div class="ui-container" id="ui-container">
+        <button id="start-ar" class="ar-button">Iniciar AR</button>
+        <div id="control-panel" class="control-panel" style="display: none;">
+            <div class="control-row">
+                <div class="control-group">
+                    <div class="control-label">Modelo</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="prev-model">◀</button>
+                        <button class="control-button" id="next-model" style="margin-left: 5px;">▶</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Escala</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="scale-down">−</button>
+                        <button class="control-button" id="scale-up" style="margin-left: 5px;">+</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Rotación</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="rotate-left">↺</button>
+                        <button class="control-button" id="rotate-right" style="margin-left: 5px;">↻</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="toggle-ui-button" id="toggle-ui">
+        <svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+    </button>
+    
+    <button class="camera-button" id="take-photo" style="display: none;">
+        <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#007BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+    </button>
+    
+    <div id="capture-preview">
+        <div class="filters-container" id="filters-container">
+            <!-- Los filtros se generarán dinámicamente por JavaScript -->
+        </div>
+        <img id="preview-image" src="" alt="Captura de pantalla">
+        <div class="preview-controls">
+            <button class="preview-button cancel" id="close-preview">
+                <svg class="preview-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Cerrar
+            </button>
+            <button class="preview-button" id="save-image">
+                <svg class="preview-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Guardar
+            </button>
+            <button class="preview-button" id="share-image">
+                <svg class="preview-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                Compartir
+            </button>
+        </div>
+    </div>
+    
+    <div id="tutorial-overlay" class="tutorial-overlay" style="display: none;">
+        <div class="tutorial-content">
+            <h2 class="tutorial-title">Bienvenido a la App AR</h2>
+            <div class="tutorial-step">
+                <div class="step-number">1</div>
+                <div class="step-text">Pulsa "Iniciar AR" y apunta a una superficie plana.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">2</div>
+                <div class="step-text">Toca la pantalla para colocar el objeto 3D.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">3</div>
+                <div class="step-text">Usa los controles para cambiar de modelo, escalar y rotar.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">4</div>
+                <div class="step-text">Puedes pellizcar con dos dedos para escalar y deslizar con un dedo para rotar.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">5</div>
+                <div class="step-text">Usa el botón de la esquina superior derecha para ocultar/mostrar controles.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">6</div>
+                <div class="step-text">Pulsa el botón de cámara para tomar una captura y guardarla o compartirla.</div>
+            </div>
+            <button class="tutorial-button" id="close-tutorial">Entendido</button>
+        </div>
+    </div>
+    
+    <div class="loading-indicator" id="loading-indicator" style="display: none;">
         <div class="spinner"></div>
-        <p>Cargando recursos...</p>
+        <div class="loading-text">Cargando...</div>
     </div>
     
-    <div id="ar-message" class="ar-message hidden">
-        <p>Por favor, mueve tu dispositivo para detectar superficies.</p>
-    </div>
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
     
-    <div id="ui-container" class="ui-container">
-        <div class="button-container">
-            <button id="ar-button">Iniciar AR</button>
-            <button id="capture-button" class="hidden">Capturar</button>
-            <button id="toggle-controls-button" class="hidden">Ocultar Controles</button>
-        </div>
-        
-        <div id="control-panel" class="control-panel hidden">
-            <select id="model-select" class="model-select">
-                <option value="cube">Cubo</option>
-                <option value="sphere">Esfera</option>
-                <option value="torus">Toroide</option>
-            </select>
-            
-            <div class="control-group">
-                <label>Escala</label>
-                <div class="slider-container">
-                    <input type="range" id="scale-slider" min="0.5" max="3" step="0.1" value="1">
-                    <span id="scale-value" class="value-display">1.0</span>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <label>Rotación X</label>
-                <div class="slider-container">
-                    <input type="range" id="rotate-x-slider" min="0" max="6.28" step="0.1" value="0">
-                    <span id="rotate-x-value" class="value-display">0.0</span>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <label>Rotación Y</label>
-                <div class="slider-container">
-                    <input type="range" id="rotate-y-slider" min="0" max="6.28" step="0.1" value="0">
-                    <span id="rotate-y-value" class="value-display">0.0</span>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <label>Rotación Z</label>
-                <div class="slider-container">
-                    <input type="range" id="rotate-z-slider" min="0" max="6.28" step="0.1" value="0">
-                    <span id="rotate-z-value" class="value-display">0.0</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="capture-overlay" class="capture-overlay hidden">
-        <img id="capture-image" class="capture-image">
-        <div class="capture-buttons">
-            <button id="share-button">Compartir</button>
-            <button id="close-capture-button">Cerrar</button>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
     <script>
-        // Variables globales
-        let camera, scene, renderer;
-        let controller, reticle;
-        let currentModel, hitTestSource, hitTestSourceRequested = false;
-        let isControlsVisible = true;
-        
-        // Estado de la aplicación
-        const appState = {
-            isARMode: false,
-            selectedModel: 'cube',
-            scale: 1.0,
-            rotationX: 0,
-            rotationY: 0,
-            rotationZ: 0,
-            modelPlaced: false
-        };
-        
-        // Cache para los modelos
-        const modelCache = {
-            cube: null,
-            sphere: null,
-            torus: null
-        };
-        
-        // Elementos de la UI
-        const ui = {
-            arButton: document.getElementById('ar-button'),
-            captureButton: document.getElementById('capture-button'),
-            toggleControlsButton: document.getElementById('toggle-controls-button'),
-            controlPanel: document.getElementById('control-panel'),
-            modelSelect: document.getElementById('model-select'),
-            scaleSlider: document.getElementById('scale-slider'),
-            scaleValue: document.getElementById('scale-value'),
-            rotateXSlider: document.getElementById('rotate-x-slider'),
-            rotateXValue: document.getElementById('rotate-x-value'),
-            rotateYSlider: document.getElementById('rotate-y-slider'),
-            rotateYValue: document.getElementById('rotate-y-value'),
-            rotateZSlider: document.getElementById('rotate-z-slider'),
-            rotateZValue: document.getElementById('rotate-z-value'),
-            captureOverlay: document.getElementById('capture-overlay'),
-            captureImage: document.getElementById('capture-image'),
-            shareButton: document.getElementById('share-button'),
-            closeCaptureButton: document.getElementById('close-capture-button'),
-            arMessage: document.getElementById('ar-message'),
-            loadingScreen: document.getElementById('loading-screen')
-        };
-        
-        // Inicializar la aplicación
-        function init() {
-            // Crear la escena
-            scene = new THREE.Scene();
+        // Clase para gestionar los filtros de imágenes
+        class ARImageFilters {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.filters = {
+                    normal: (imageData) => imageData,
+                    grayscale: this.grayscaleFilter.bind(this),
+                    sepia: this.sepiaFilter.bind(this),
+                    vintage: this.vintageFilter.bind(this),
+                    neon: this.neonFilter.bind(this),
+                    blueprint: this.blueprintFilter.bind(this)
+                };
+                this.currentFilter = 'normal';
+                this.filterThumbnails = {};
+            }
             
-            // Crear la cámara
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-            
-            // Crear la luz ambiental
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            
-            // Crear la luz direccional
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(0, 5, 0);
-            scene.add(directionalLight);
-            
-            // Crear el renderer
-            renderer = new THREE.WebGLRenderer({
-                canvas: document.getElementById('ar-canvas'),
-                alpha: true,
-                antialias: true
-            });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.xr.enabled = true;
-            
-            // Crear el reticle
-            const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
-            const reticleMaterial = new THREE.MeshBasicMaterial();
-            reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-            reticle.matrixAutoUpdate = false;
-            reticle.visible = false;
-            scene.add(reticle);
-            
-            // Precargar los modelos
-            loadModels();
-            
-            // Configurar el controlador
-            setupARButton();
-            
-            // Configurar los eventos de la UI
-            setupUIEvents();
-            
-            // Iniciar el bucle de renderizado
-            renderer.setAnimationLoop(render);
-            
-            // Configurar el evento de redimensión
-            window.addEventListener('resize', onWindowResize);
-        }
-        
-        // Cargar los modelos
-        function loadModels() {
-            // Crear el cubo
-            const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-            const cubeMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x00ff00,
-                metalness: 0.7,
-                roughness: 0.3
-            });
-            modelCache.cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            
-            // Crear la esfera
-            const sphereGeometry = new THREE.SphereGeometry(0.15, 32, 32);
-            const sphereMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xff0000,
-                metalness: 0.7,
-                roughness: 0.3
-            });
-            modelCache.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-            
-            // Crear el toroide
-            const torusGeometry = new THREE.TorusGeometry(0.15, 0.05, 16, 100);
-            const torusMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x0000ff,
-                metalness: 0.7,
-                roughness: 0.3
-            });
-            modelCache.torus = new THREE.Mesh(torusGeometry, torusMaterial);
-            
-            // Ocultar la pantalla de carga
-            setTimeout(() => {
-                ui.loadingScreen.classList.add('hidden');
-            }, 1000);
-        }
-        
-        // Configurar el botón de AR
-        function setupARButton() {
-            ui.arButton.addEventListener('click', () => {
-                if (navigator.xr) {
-                    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                        if (supported) {
-                            startAR();
-                        } else {
-                            alert('La Realidad Aumentada no está soportada en este dispositivo.');
-                        }
-                    });
-                } else {
-                    alert('WebXR no está soportado en este navegador.');
+            setFilter(filterName) {
+                if (this.filters[filterName]) {
+                    this.currentFilter = filterName;
+                    return true;
                 }
-            });
+                return false;
+            }
+            
+            processImage(sourceCanvas) {
+                // Redimensionar el canvas si es necesario
+                if (this.canvas.width !== sourceCanvas.width || this.canvas.height !== sourceCanvas.height) {
+                    this.canvas.width = sourceCanvas.width;
+                    this.canvas.height = sourceCanvas.height;
+                }
+                
+                // Copiar la imagen original al canvas
+                this.ctx.drawImage(sourceCanvas, 0, 0);
+                
+                // Obtener los datos de la imagen
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Aplicar el filtro actual
+                const processedData = this.filters[this.currentFilter](imageData);
+                
+                // Dibujar la imagen procesada
+                this.ctx.putImageData(processedData, 0, 0);
+                
+                return this.canvas;
+            }
+            
+            createFilterThumbnail(sourceCanvas, filterName, width = 60, height = 60) {
+                // Crear un canvas para el thumbnail
+                const thumbnailCanvas = document.createElement('canvas');
+                thumbnailCanvas.width = width;
+                thumbnailCanvas.height = height;
+                const ctx = thumbnailCanvas.getContext('2d');
+                
+                // Redimensionar y dibujar la imagen original
+                ctx.drawImage(sourceCanvas, 0, 0, width, height);
+                
+                // Obtener los datos de la imagen
+                const imageData = ctx.getImageData(0, 0, width, height);
+                
+                // Aplicar el filtro
+                if (this.filters[filterName]) {
+                    const processedData = this.filters[filterName](imageData);
+                    ctx.putImageData(processedData, 0, 0);
+                }
+                
+                return thumbnailCanvas;
+            }
+            
+            grayscaleFilter(imageData) {
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    data[i] = avg;     // R
+                    data[i + 1] = avg; // G
+                    data[i + 2] = avg; // B
+                }
+                return imageData;
+            }
+            
+            sepiaFilter(imageData) {
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+                    data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+                    data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+                }
+                return imageData;
+            }
+            
+            vintageFilter(imageData) {
+                // Primero aplicamos sepia
+                let sepiaData = this.sepiaFilter(Object.assign({}, imageData));
+                const data = sepiaData.data;
+                
+                // Añadir viñeteado
+                const w = imageData.width;
+                const h = imageData.height;
+                const centerX = w / 2;
+                const centerY = h / 2;
+                const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+                
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+                        const dx = x - centerX;
+                        const dy = y - centerY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const factor = 1 - Math.pow(dist / maxDist, 2) * 0.5;
+                        
+                        data[i] = data[i] * factor;
+                        data[i + 1] = data[i + 1] * factor;
+                        data[i + 2] = data[i + 2] * factor;
+                    }
+                }
+                
+                return sepiaData;
+            }
+            
+            neonFilter(imageData) {
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.min(255, data[i] * 1.5);       // Aumentar rojos
+                    data[i + 2] = Math.min(255, data[i + 2] * 2); // Aumentar azules
+                    // Añadir contraste
+                    data[i] = data[i] > 128 ? data[i] + 20 : data[i] - 20;
+                    data[i + 1] = data[i + 1] > 128 ? data[i + 1] + 10 : data[i + 1] - 10;
+                    data[i + 2] = data[i + 2] > 128 ? data[i + 2] + 30 : data[i + 2] - 30;
+                }
+                return imageData;
+            }
+            
+            blueprintFilter(imageData) {
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    // Primero convertimos a escala de grises
+                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    
+                    // Invertimos y aplicamos tinte azul
+                    data[i] = 255 - avg * 0.2;     // Casi no rojo
+                    data[i + 1] = 255 - avg * 0.5; // Algo de verde
+                    data[i + 2] = 255;             // Máximo azul
+                }
+                return imageData;
+            }
         }
         
-        // Iniciar la sesión de AR
-        function startAR() {
-            navigator.xr.requestSession('immersive-ar', {
-                requiredFeatures: ['hit-test', 'dom-overlay'],
-                domOverlay: { root: document.getElementById('ui-container') }
-            }).then((session) => {
-                renderer.xr.setReferenceSpaceType('local');
-                renderer.xr.setSession(session);
+        // Aplicación principal
+        class ARApplication {
+            constructor() {
+                this.isARSupported = navigator.xr && navigator.xr.isSessionSupported ? true : false;
+                this.arButton = document.getElementById('start-ar');
+                this.controlPanel = document.getElementById('control-panel');
+                this.uiContainer = document.getElementById('ui-container');
+                this.toggleUIButton = document.getElementById('toggle-ui');
+                this.takePhotoButton = document.getElementById('take-photo');
+                this.capturePreview = document.getElementById('capture-preview');
+                this.previewImage = document.getElementById('preview-image');
+                this.closePreviewButton = document.getElementById('close-preview');
+                this.saveImageButton = document.getElementById('save-image');
+                this.shareImageButton = document.getElementById('share-image');
+                this.filtersContainer = document.getElementById('filters-container');
+                this.tutorialOverlay = document.getElementById('tutorial-overlay');
+                this.closeTutorialButton = document.getElementById('close-tutorial');
+                this.loadingIndicator = document.getElementById('loading-indicator');
+                this.tooltip = document.getElementById('tooltip');
                 
-                ui.arButton.classList.add('hidden');
-                ui.captureButton.classList.remove('hidden');
-                ui.toggleControlsButton.classList.remove('hidden');
-                ui.controlPanel.classList.remove('hidden');
-                ui.arMessage.classList.remove('hidden');
+                this.canvas = document.getElementById('ar-canvas');
+                this.gl = null;
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.session = null;
+                this.referenceSpace = null;
+                this.hitTestSource = null;
+                this.frameOfRef = null;
                 
-                appState.isARMode = true;
+                this.models = [
+                    { name: 'Cubo', create: this.createCube.bind(this) },
+                    { name: 'Esfera', create: this.createSphere.bind(this) },
+                    { name: 'Cilindro', create: this.createCylinder.bind(this) },
+                    { name: 'Toro', create: this.createTorus.bind(this) },
+                    { name: 'Pirámide', create: this.createPyramid.bind(this) }
+                ];
+                this.currentModelIndex = 0;
+                this.currentObject = null;
+                this.objectPlaced = false;
                 
-                session.addEventListener('end', () => {
-                    ui.arButton.classList.remove('hidden');
-                    ui.captureButton.classList.add('hidden');
-                    ui.toggleControlsButton.classList.add('hidden');
-                    ui.controlPanel.classList.add('hidden');
-                    ui.arMessage.classList.add('hidden');
-                    
-                    appState.isARMode = false;
-                    appState.modelPlaced = false;
-                    
-                    if (currentModel) {
-                        scene.remove(currentModel);
-                        currentModel = null;
-                    }
+                this.uiVisible = true;
+                this.scale = 1.0;
+                this.filterProcessor = null;
+                this.captureCanvas = document.createElement('canvas');
+                this.filterCanvas = document.createElement('canvas');
+                this.currentFilter = 'normal';
+                
+                // Inicializar gestos
+                this.hammerManager = null;
+                
+                // Verificar si es la primera visita
+                this.isFirstVisit = !localStorage.getItem('ar-app-visited');
+                
+                // Inicialización
+                this.init();
+            }
+            
+            init() {
+                if (!this.isARSupported) {
+                    this.arButton.textContent = 'AR no soportado en este dispositivo';
+                    this.arButton.disabled = true;
+                    return;
+                }
+                
+                // Inicializar Three.js
+                this.initThreeJS();
+                
+                // Inicializar filtros
+                this.filterProcessor = new ARImageFilters(this.filterCanvas);
+                
+                // Configurar eventos
+                this.setupEventListeners();
+                
+                // Mostrar tutorial si es la primera visita
+                if (this.isFirstVisit) {
+                    setTimeout(() => {
+                        this.tutorialOverlay.style.display = 'flex';
+                        localStorage.setItem('ar-app-visited', 'true');
+                    }, 1000);
+                }
+            }
+            
+            initThreeJS() {
+                // Configurar la escena
+                this.scene = new THREE.Scene();
+                
+                // Configurar la cámara
+                this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+                
+                // Añadir iluminación
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(0, 5, 0);
+                this.scene.add(directionalLight);
+                
+                // Configurar el renderer
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.canvas,
+                    antialias: true,
+                    alpha: true
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.renderer.xr.enabled = true;
+                
+                // Ajustar al cambiar tamaño de ventana
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+            
+            setupEventListeners() {
+                // Botón de inicio de AR
+                this.arButton.addEventListener('click', () => this.startAR());
+                
+                // Botones de control de modelos
+                document.getElementById('prev-model').addEventListener('click', () => this.changeModel(-1));
+                document.getElementById('next-model').addEventListener('click', () => this.changeModel(1));
+                
+                // Botones de control de escala
+                document.getElementById('scale-down').addEventListener('click', () => this.scaleObject(0.9));
+                document.getElementById('scale-up').addEventListener('click', () => this.scaleObject(1.1));
+                
+                // Botones de control de rotación
+                document.getElementById('rotate-left').addEventListener('click', () => this.rotateObject(-Math.PI / 8));
+                document.getElementById('rotate-right').addEventListener('click', () => this.rotateObject(Math.PI / 8));
+                
+                // Botón de alternancia de UI
+                this.toggleUIButton.addEventListener('click', () => this.toggleUI());
+                
+                // Botón de captura de pantalla
+                this.takePhotoButton.addEventListener('click', () => this.captureScreen());
+                
+                // Botones de previsualización
+                this.closePreviewButton.addEventListener('click', () => this.closePreview());
+                this.saveImageButton.addEventListener('click', () => this.saveImage());
+                this.shareImageButton.addEventListener('click', () => this.shareImage());
+                
+                // Cerrar tutorial
+                this.closeTutorialButton.addEventListener('click', () => {
+                    this.tutorialOverlay.style.display = 'none';
                 });
                 
-                session.addEventListener('select', onSelect);
-            });
-        }
-        
-        // Configurar los eventos de la UI
-        function setupUIEvents() {
-            // Selección de modelo
-            ui.modelSelect.addEventListener('change', (e) => {
-                appState.selectedModel = e.target.value;
-                if (appState.modelPlaced && currentModel) {
-                    updateModel();
-                }
-            });
-            
-            // Control de escala
-            ui.scaleSlider.addEventListener('input', (e) => {
-                appState.scale = parseFloat(e.target.value);
-                ui.scaleValue.textContent = appState.scale.toFixed(1);
-                if (currentModel) {
-                    currentModel.scale.setScalar(appState.scale);
-                }
-            });
-            
-            // Control de rotación X
-            ui.rotateXSlider.addEventListener('input', (e) => {
-                appState.rotationX = parseFloat(e.target.value);
-                ui.rotateXValue.textContent = appState.rotationX.toFixed(1);
-                if (currentModel) {
-                    currentModel.rotation.x = appState.rotationX;
-                }
-            });
-            
-            // Control de rotación Y
-            ui.rotateYSlider.addEventListener('input', (e) => {
-                appState.rotationY = parseFloat(e.target.value);
-                ui.rotateYValue.textContent = appState.rotationY.toFixed(1);
-                if (currentModel) {
-                    currentModel.rotation.y = appState.rotationY;
-                }
-            });
-            
-            // Control de rotación Z
-            ui.rotateZSlider.addEventListener('input', (e) => {
-                appState.rotationZ = parseFloat(e.target.value);
-                ui.rotateZValue.textContent = appState.rotationZ.toFixed(1);
-                if (currentModel) {
-                    currentModel.rotation.z = appState.rotationZ;
-                }
-            });
-            
-            // Botón de captura
-            ui.captureButton.addEventListener('click', captureScene);
-            
-            // Botón para mostrar/ocultar controles
-            ui.toggleControlsButton.addEventListener('click', toggleControls);
-            
-            // Botones de la captura
-            ui.shareButton.addEventListener('click', shareCapture);
-            ui.closeCaptureButton.addEventListener('click', closeCapture);
-        }
-        
-        // Actualizar el modelo en la escena
-        function updateModel() {
-            if (currentModel) {
-                scene.remove(currentModel);
-            }
-            
-            currentModel = modelCache[appState.selectedModel].clone();
-            currentModel.scale.setScalar(appState.scale);
-            currentModel.rotation.set(appState.rotationX, appState.rotationY, appState.rotationZ);
-            
-            scene.add(currentModel);
-        }
-        
-        // Evento de selección en AR
-        function onSelect() {
-            if (reticle.visible) {
-                if (!appState.modelPlaced) {
-                    updateModel();
-                    
-                    // Establecer la posición del modelo en la posición del reticle
-                    currentModel.position.setFromMatrixPosition(reticle.matrix);
-                    appState.modelPlaced = true;
-                    
-                    // Ocultar el mensaje de AR
-                    ui.arMessage.classList.add('hidden');
-                } else {
-                    // Si ya hay un modelo, actualizamos su posición
-                    currentModel.position.setFromMatrixPosition(reticle.matrix);
-                }
-            }
-        }
-        
-        // Capturar la escena
-        function captureScene() {
-            // Ocultar los controles temporalmente para la captura
-            const controlsVisible = isControlsVisible;
-            if (controlsVisible) {
-                ui.controlPanel.classList.add('hidden');
-                ui.toggleControlsButton.textContent = 'Mostrar Controles';
-            }
-            
-            // Pequeña espera para asegurar que la UI se actualice
-            setTimeout(() => {
-                // Capturar la imagen
-                renderer.domElement.toBlob((blob) => {
-                    const imageUrl = URL.createObjectURL(blob);
-                    ui.captureImage.src = imageUrl;
-                    ui.captureOverlay.classList.remove('hidden');
-                    
-                    // Restaurar los controles si estaban visibles
-                    if (controlsVisible) {
-                        ui.controlPanel.classList.remove('hidden');
-                        ui.toggleControlsButton.textContent = 'Ocultar Controles';
-                    }
-                });
-            }, 100);
-        }
-        
-        // Compartir la captura
-        function shareCapture() {
-            // Convertir la imagen a blob
-            fetch(ui.captureImage.src)
-                .then(res => res.blob())
-                .then(blob => {
-                    // Crear el objeto de archivo
-                    const file = new File([blob], 'ar-capture.png', { type: 'image/png' });
-                    
-                    // Verificar si el navegador soporta la API de compartir
-                    if (navigator.share) {
-                        navigator.share({
-                            title: 'Mi captura de AR',
-                            files: [file]
-                        }).catch(error => {
-                            console.error('Error al compartir:', error);
-                            fallbackShare(ui.captureImage.src);
-                        });
-                    } else {
-                        fallbackShare(ui.captureImage.src);
-                    }
-                });
-        }
-        
-        // Método alternativo para compartir
-        function fallbackShare(imageUrl) {
-            // Crear un enlace de descarga
-            const link = document.createElement('a');
-            link.href = imageUrl;
-            link.download = 'ar-capture.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        // Cerrar la vista de captura
-        function closeCapture() {
-            ui.captureOverlay.classList.add('hidden');
-        }
-        
-        // Mostrar/ocultar los controles
-        function toggleControls() {
-            isControlsVisible = !isControlsVisible;
-            
-            if (isControlsVisible) {
-                ui.controlPanel.classList.remove('hidden');
-                ui.toggleControlsButton.textContent = 'Ocultar Controles';
-            } else {
-                ui.controlPanel.classList.add('hidden');
-                ui.toggleControlsButton.textContent = 'Mostrar Controles';
-            }
-        }
-        
-        // Manejar el redimensionamiento de la ventana
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        // Función de renderizado
-        function render(timestamp, frame) {
-            if (frame) {
-                const referenceSpace = renderer.xr.getReferenceSpace();
-                const session = renderer.xr.getSession();
+                // Tooltips para botones
+                this.addTooltip(this.toggleUIButton, 'Mostrar/Ocultar controles');
+                this.addTooltip(this.takePhotoButton, 'Tomar captura');
                 
-                if (!hitTestSourceRequested) {
-                    session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                        session.requestHitTestSource({ space: referenceSpace }).then((source) => {
-                            hitTestSource = source;
-                        });
+                // Gestionar eventos de pantalla táctil
+                this.canvas.addEventListener('touchstart', (event) => {
+                    if (this.session && !this.objectPlaced) {
+                        this.handleTouchStart(event);
+                    }
+                });
+            }
+            
+            addTooltip(element, text) {
+                element.addEventListener('mouseover', (e) => {
+                    this.tooltip.textContent = text;
+                    this.tooltip.style.display = 'block';
+                    this.tooltip.style.opacity = '1';
+                    this.tooltip.style.left = `${e.clientX + 10}px`;
+                    this.tooltip.style.top = `${e.clientY + 10}px`;
+                });
+                
+                element.addEventListener('mousemove', (e) => {
+                    this.tooltip.style.left = `${e.clientX + 10}px`;
+                    this.tooltip.style.top = `${e.clientY + 10}px`;
+                });
+                
+                element.addEventListener('mouseout', () => {
+                    this.tooltip.style.opacity = '0';
+                    setTimeout(() => {
+                        this.tooltip.style.display = 'none';
+                    }, 300);
+                });
+            }
+            
+            async startAR() {
+                try {
+                    this.showLoading(true);
+                    
+                    // Comprobar si WebXR está soportado
+                    const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                    if (!isSupported) {
+                        alert('La realidad aumentada no está soportada en este dispositivo');
+                        this.showLoading(false);
+                        return;
+                    }
+                    
+                    // Crear sesión AR
+                    this.session = await navigator.xr.requestSession('immersive-ar', {
+                        requiredFeatures: ['hit-test', 'dom-overlay'],
+                        domOverlay: { root: document.body }
                     });
                     
-                    hitTestSourceRequested = true;
+                    // Configurar eventos de sesión
+                    this.session.addEventListener('end', () => {
+                        this.endAR();
+                    });
+                    
+                    // Iniciar WebXR con Three.js
+                    await this.renderer.xr.setSession(this.session);
+                    
+                    // Obtener espacio de referencia
+                    this.referenceSpace = await this.session.requestReferenceSpace('local');
+                    this.viewerSpace = await this.session.requestReferenceSpace('viewer');
+                    
+                    // Configurar el hit testing
+                    this.hitTestSource = await this.session.requestHitTestSource({
+                        space: this.viewerSpace
+                    });
+                    
+                    // Ocultar botón de inicio y mostrar controles
+                    this.arButton.style.display = 'none';
+                    this.controlPanel.style.display = 'block';
+                    this.takePhotoButton.style.display = 'block';
+                    
+                    // Configurar loop de renderizado
+                    this.session.requestAnimationFrame((time, frame) => {
+                        this.onXRFrame(time, frame);
+                    });
+                    
+                    // Inicializar gestos una vez que la escena AR está activa
+                    this.initGestures();
+                    
+                    this.showLoading(false);
+                } catch (err) {
+                    console.error('Error al iniciar AR:', err);
+                    alert(`Error al iniciar AR: ${err.message}`);
+                    this.showLoading(false);
+                }
+            }
+            
+            endAR() {
+                if (this.hitTestSource) {
+                    this.hitTestSource.cancel();
+                    this.hitTestSource = null;
                 }
                 
-                if (hitTestSource) {
-                    const hitTestResults = frame.getHitTestResults(hitTestSource);
+                if (this.session) {
+                    this.session = null;
+                }
+                
+                // Restablecer la UI
+                this.arButton.style.display = 'block';
+                this.controlPanel.style.display = 'none';
+                this.takePhotoButton.style.display = 'none';
+                this.objectPlaced = false;
+                
+                // Limpiar la escena
+                if (this.currentObject) {
+                    this.scene.remove(this.currentObject);
+                    this.currentObject = null;
+                }
+            }
+            
+            onXRFrame(time, frame) {
+                if (!this.session) return;
+                
+                // Programar el siguiente frame
+                this.session.requestAnimationFrame((t, f) => this.onXRFrame(t, f));
+                
+                // Obtener la pose
+                const pose = frame.getViewerPose(this.referenceSpace);
+                if (!pose) return;
+                
+                // Actualizar la vista de la cámara
+                const view = pose.views[0];
+                const viewport = this.session.renderState.baseLayer.getViewport(view);
+                this.renderer.setSize(viewport.width, viewport.height);
+                
+                // Realizar hit testing si el objeto no está colocado
+                if (!this.objectPlaced && this.hitTestSource) {
+                    const hitTestResults = frame.getHitTestResults(this.hitTestSource);
                     
                     if (hitTestResults.length > 0) {
                         const hit = hitTestResults[0];
-                        reticle.visible = true;
-                        reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                        const hitPose = hit.getPose(this.referenceSpace);
                         
-                        // Ocultar el mensaje de AR cuando detecte una superficie
-                        if (ui.arMessage.classList.contains('hidden') === false) {
-                            ui.arMessage.classList.add('hidden');
+                        // Mostrar un marcador de posición si no hay objeto
+                        if (!this.currentObject) {
+                            const marker = this.createPlacementMarker();
+                            this.scene.add(marker);
+                            this.currentObject = marker;
                         }
-                    } else {
-                        reticle.visible = false;
+                        
+                        // Actualizar posición del marcador o objeto
+                        this.currentObject.position.set(
+                            hitPose.transform.position.x,
+                            hitPose.transform.position.y,
+                            hitPose.transform.position.z
+                        );
+                        
+                        // Orientar hacia la cámara para el marcador
+                        if (!this.objectPlaced) {
+                            const cameraPose = pose.transform;
+                            const cameraPosVector = new THREE.Vector3(
+                                cameraPose.position.x,
+                                hitPose.transform.position.y, // Mantener la misma altura
+                                cameraPose.position.z
+                            );
+                            this.currentObject.lookAt(cameraPosVector);
+                        }
                     }
+                }
+                
+                // Renderizar la escena
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            handleTouchStart(event) {
+                if (event.touches.length === 1) {
+                    // Colocar objeto
+                    this.placeObject();
                 }
             }
             
-            renderer.render(scene, camera);
+            initGestures() {
+                // Inicializar Hammer.js para gestos
+                this.hammerManager = new Hammer.Manager(this.canvas);
+                
+                // Reconocedor de pellizco para escalar
+                const pinch = new Hammer.Pinch();
+                this.hammerManager.add(pinch);
+                
+                // Reconocedor de rotación
+                const rotate = new Hammer.Rotate();
+                rotate.recognizeWith(pinch); // Reconocer rotación durante pellizco
+                this.hammerManager.add(rotate);
+                
+                // Reconocedor de deslizamiento para rotar
+                const pan = new Hammer.Pan({ threshold: 10, direction: Hammer.DIRECTION_ALL });
+                this.hammerManager.add(pan);
+                
+                // Variables para gestos
+                let lastScale = 1;
+                let lastRotation = 0;
+                
+                // Eventos de gestos
+                this.hammerManager.on('pinch', (ev) => {
+                    if (this.objectPlaced && this.currentObject) {
+                        const scaleFactor = ev.scale / lastScale;
+                        this.scaleObject(scaleFactor);
+                        lastScale = ev.scale;
+                    }
+                });
+                
+                this.hammerManager.on('pinchend', () => {
+                    lastScale = 1;
+                });
+                
+                this.hammerManager.on('rotate', (ev) => {
+                    if (this.objectPlaced && this.currentObject) {
+                        const rotation = ev.rotation - lastRotation;
+                        this.rotateObject(rotation * Math.PI / 180);
+                        lastRotation = ev.rotation;
+                    }
+                });
+                
+                this.hammerManager.on('rotateend', () => {
+                    lastRotation = 0;
+                });
+                
+                this.hammerManager.on('pan', (ev) => {
+                    if (this.objectPlaced && this.currentObject && ev.pointerType === 'touch') {
+                        // Convertir movimiento horizontal a rotación en Y
+                        const rotationY = (ev.deltaX * 0.01);
+                        
+                        // Aplicar rotación
+                        this.currentObject.rotation.y += rotationY;
+                    }
+                });
+            }
+            
+            placeObject() {
+                if (!this.currentObject) return;
+                
+                // Eliminar el marcador de posición
+                this.scene.remove(this.currentObject);
+                
+                // Crear y añadir el objeto seleccionado
+                const newObject = this.models[this.currentModelIndex].create();
+                this.scene.add(newObject);
+                
+                // Copiar la posición del marcador
+                newObject.position.copy(this.currentObject.position);
+                
+                // Actualizar referencia
+                this.currentObject = newObject;
+                this.currentObject.scale.set(this.scale, this.scale, this.scale);
+                
+                // Marcar como colocado
+                this.objectPlaced = true;
+            }
+            
+            changeModel(direction) {
+                if (!this.objectPlaced) return;
+                
+                // Actualizar índice del modelo
+                this.currentModelIndex = (this.currentModelIndex + direction + this.models.length) % this.models.length;
+                
+                // Guardar posición y rotación actuales
+                const position = this.currentObject.position.clone();
+                const rotation = this.currentObject.rotation.clone();
+                const scale = this.currentObject.scale.clone();
+                
+                // Eliminar objeto actual
+                this.scene.remove(this.currentObject);
+                
+                // Crear nuevo objeto
+                const newObject = this.models[this.currentModelIndex].create();
+                
+                // Restaurar posición y rotación
+                newObject.position.copy(position);
+                newObject.rotation.copy(rotation);
+                newObject.scale.copy(scale);
+                
+                // Actualizar referencia
+                this.scene.add(newObject);
+                this.currentObject = newObject;
+                
+                // Mostrar feedback
+                this.showToast(`Modelo: ${this.models[this.currentModelIndex].name}`);
+            }
+            
+            scaleObject(factor) {
+                if (!this.objectPlaced || !this.currentObject) return;
+                
+                // Aplicar factor de escala
+                this.scale *= factor;
+                
+                // Limitar escala
+                this.scale = Math.max(0.2, Math.min(3.0, this.scale));
+                
+                // Actualizar objeto
+                this.currentObject.scale.set(this.scale, this.scale, this.scale);
+            }
+            
+            rotateObject(angle) {
+                if (!this.objectPlaced || !this.currentObject) return;
+                
+                // Aplicar rotación en el eje Y
+                this.currentObject.rotation.y += angle;
+            }
+            
+            toggleUI() {
+                this.uiVisible = !this.uiVisible;
+                
+                // Actualizar visibilidad
+                this.uiContainer.style.opacity = this.uiVisible ? '1' : '0';
+                
+                // Actualizar icono del botón
+                this.toggleUIButton.innerHTML = this.uiVisible ? 
+                    '<svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16m-7 6h7"></path></svg>' : 
+                    '<svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
+            }
+            
+            async captureScreen() {
+                // Ocultar UI para la captura
+                const wasVisible = this.uiVisible;
+                if (wasVisible) {
+                    this.uiVisible = false;
+                    this.uiContainer.style.opacity = '0';
+                    this.toggleUIButton.style.opacity = '0';
+                    this.takePhotoButton.style.opacity = '0';
+                }
+                
+                // Esperar un momento para que la UI se oculte completamente
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Capturar el frame actual
+                if (!this.session) return;
+                
+                // Usar XRFrame.captureScreen() (API hipotética) o simplemente capturar el canvas
+                this.captureCanvas.width = this.canvas.width;
+                this.captureCanvas.height = this.canvas.height;
+                const ctx = this.captureCanvas.getContext('2d');
+                ctx.drawImage(this.canvas, 0, 0);
+                
+                // Crear miniaturas de filtros
+                this.createFilterThumbnails();
+                
+                // Mostrar previsualización con filtro actual
+                this.applyFilterAndUpdatePreview();
+                
+                // Mostrar la previsualización
+                this.capturePreview.style.display = 'flex';
+                
+                // Restaurar UI
+                if (wasVisible) {
+                    this.uiVisible = true;
+                    this.uiContainer.style.opacity = '1';
+                    this.toggleUIButton.style.opacity = '1';
+                    this.takePhotoButton.style.opacity = '1';
+                }
+            }
+            
+            createFilterThumbnails() {
+                // Limpiar contenedor de filtros
+                this.filtersContainer.innerHTML = '';
+                
+                // Crear un thumbnail para cada filtro
+                Object.keys(this.filterProcessor.filters).forEach(filterName => {
+                    // Crear thumbnail con el filtro aplicado
+                    const thumbnailCanvas = this.filterProcessor.createFilterThumbnail(this.captureCanvas, filterName);
+                    
+                    // Crear elemento de UI para el filtro
+                    const filterOption = document.createElement('div');
+                    filterOption.className = 'filter-option';
+                    
+                    const thumbnailContainer = document.createElement('div');
+                    thumbnailContainer.className = `filter-thumbnail ${filterName === this.currentFilter ? 'active' : ''}`;
+                    thumbnailContainer.appendChild(thumbnailCanvas);
+                    
+                    const filterLabel = document.createElement('div');
+                    filterLabel.className = 'filter-label';
+                    filterLabel.textContent = this.getFilterDisplayName(filterName);
+                    
+                    filterOption.appendChild(thumbnailContainer);
+                    filterOption.appendChild(filterLabel);
+                    
+                    // Añadir evento al hacer clic
+                    filterOption.addEventListener('click', () => {
+                        this.currentFilter = filterName;
+                        
+                        // Actualizar clase activa
+                        document.querySelectorAll('.filter-thumbnail').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        thumbnailContainer.classList.add('active');
+                        
+                        // Aplicar filtro
+                        this.applyFilterAndUpdatePreview();
+                    });
+                    
+                    this.filtersContainer.appendChild(filterOption);
+                });
+            }
+            
+            getFilterDisplayName(filterName) {
+                const displayNames = {
+                    'normal': 'Normal',
+                    'grayscale': 'B&N',
+                    'sepia': 'Sepia',
+                    'vintage': 'Retro',
+                    'neon': 'Neón',
+                    'blueprint': 'Plano'
+                };
+                
+                return displayNames[filterName] || filterName;
+            }
+            
+            applyFilterAndUpdatePreview() {
+                // Aplicar el filtro seleccionado
+                this.filterProcessor.setFilter(this.currentFilter);
+                const filteredCanvas = this.filterProcessor.processImage(this.captureCanvas);
+                
+                // Actualizar la imagen de previsualización
+                this.previewImage.src = filteredCanvas.toDataURL('image/png');
+            }
+            
+            closePreview() {
+                this.capturePreview.style.display = 'none';
+            }
+            
+            saveImage() {
+                // Crear un enlace de descarga
+                const link = document.createElement('a');
+                link.download = `ar-capture-${Date.now()}.png`;
+                link.href = this.previewImage.src;
+                link.click();
+                
+                // Cerrar previsualización después de guardar
+                setTimeout(() => {
+                    this.closePreview();
+                    this.showToast('Imagen guardada correctamente');
+                }, 500);
+            }
+            
+            async shareImage() {
+                // Comprobar si la API Web Share está disponible
+                if (navigator.share) {
+                    try {
+                        // Convertir la URL de datos a un blob
+                        const response = await fetch(this.previewImage.src);
+                        const blob = await response.blob();
+                        const file = new File([blob], `ar-capture-${Date.now()}.png`, { type: 'image/png' });
+                        
+                        // Compartir archivo
+                        await navigator.share({
+                            title: 'Mi captura AR',
+                            text: 'Mira esta imagen de realidad aumentada que he creado',
+                            files: [file]
+                        });
+                        
+                        // Cerrar previsualización después de compartir
+                        this.closePreview();
+                    } catch (error) {
+                        console.error('Error al compartir:', error);
+                        
+                        // Si falló la compartición de archivos, intentar con solo texto y URL
+                        try {
+                            await navigator.share({
+                                title: 'Mi captura AR',
+                                text: 'Mira esta imagen de realidad aumentada que he creado'
+                            });
+                            this.closePreview();
+                        } catch (err) {
+                            this.showToast('Error al compartir la imagen');
+                        }
+                    }
+                } else {
+                    this.showToast('Compartir no está disponible en tu dispositivo');
+                }
+            }
+            
+            showToast(message, duration = 2000) {
+                // Crear elemento toast
+                const toast = document.createElement('div');
+                toast.style.position = 'fixed';
+                toast.style.bottom = '80px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                toast.style.color = 'white';
+                toast.style.padding = '10px 20px';
+                toast.style.borderRadius = '20px';
+                toast.style.zIndex = '1000';
+                toast.style.transition = 'opacity 0.3s';
+                toast.textContent = message;
+                
+                // Añadir al DOM
+                document.body.appendChild(toast);
+                
+                // Mostrar y ocultar después de un tiempo
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, duration);
+            }
+            
+            showLoading(show) {
+                this.loadingIndicator.style.display = show ? 'flex' : 'none';
+            }
+            
+            // Creación de objetos 3D
+            createPlacementMarker() {
+                const markerGeometry = new THREE.RingGeometry(0.15, 0.2, 32);
+                const markerMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ff00,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                
+                // Rotar para que sea horizontal
+                marker.rotation.x = -Math.PI / 2;
+                
+                return marker;
+            }
+            
+            createCube() {
+                const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x2196F3,
+                    roughness: 0.3,
+                    metalness: 0.5
+                });
+                return new THREE.Mesh(geometry, material);
+            }
+            
+            createSphere() {
+                const geometry = new THREE.SphereGeometry(0.25, 32, 32);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0xE91E63,
+                    roughness: 0.2,
+                    metalness: 0.1
+                });
+                return new THREE.Mesh(geometry, material);
+            }
+            
+            createCylinder() {
+                const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.5, 32);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x4CAF50,
+                    roughness: 0.4,
+                    metalness: 0.3
+                });
+                return new THREE.Mesh(geometry, material);
+            }
+            
+            createTorus() {
+                const geometry = new THREE.TorusGeometry(0.2, 0.07, 16, 100);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0xFFC107,
+                    roughness: 0.1,
+                    metalness: 0.8
+                });
+                return new THREE.Mesh(geometry, material);
+            }
+            
+            createPyramid() {
+                const geometry = new THREE.ConeGeometry(0.3, 0.5, 4);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x9C27B0,
+                    roughness: 0.5,
+                    metalness: 0.2
+                });
+                return new THREE.Mesh(geometry, material);
+            }
         }
         
-        // Iniciar la aplicación cuando se carga la página
-        window.addEventListener('load', init);
+        // Iniciar aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new ARApplication();
+        });
     </script>
 </body>
 </html>
