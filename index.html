@@ -1,276 +1,307 @@
-<!-- Archivo corregido por ChatGPT el 2025-04-30 -->
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Aplicación AR con WebXR</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-
-<link href="style.css" rel="stylesheet"/></head>
-<body>
-<canvas id="ar-canvas"></canvas>
-<div class="ui-container" id="ui-container">
-<button class="ar-button" id="start-ar">Iniciar AR</button>
-<div class="control-panel" id="control-panel" style="display: none;">
-<div class="control-row">
-<div class="control-group">
-<div class="control-label">Modelo</div>
-<div style="display: flex;">
-<button class="control-button" id="prev-model">◀</button>
-<button class="control-button" id="next-model" style="margin-left: 5px;">▶</button>
-</div>
-</div>
-<div class="control-group">
-<div class="control-label">Escala</div>
-<div style="display: flex;">
-<button class="control-button" id="scale-down">−</button>
-<button class="control-button" id="scale-up" style="margin-left: 5px;">+</button>
-</div>
-</div>
-<div class="control-group">
-<div class="control-label">Rotación</div>
-<div style="display: flex;">
-<button class="control-button" id="rotate-left">↺</button>
-<button class="control-button" id="rotate-right" style="margin-left: 5px;">↻</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<button class="toggle-ui-button" id="toggle-ui">
-<svg class="toggle-ui-icon" fill="none" stroke="#333" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-<path d="M4 6h16M4 12h16m-7 6h7"></path>
-</svg>
-</button>
-<button class="camera-button" id="take-photo" style="display: none;">
-<svg class="camera-icon" fill="none" stroke="#007BFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-<circle cx="12" cy="13" r="4"></circle>
-</svg>
-</button>
-<div id="capture-preview">
-<div class="filters-container" id="filters-container">
-<!-- Los filtros se generarán dinámicamente por JavaScript -->
-</div>
-<img alt="Captura de pantalla" id="preview-image" src=""/>
-<div class="preview-controls">
-<button class="preview-button cancel" id="close-preview">
-<svg class="preview-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-<line x1="18" x2="6" y1="6" y2="18"></line>
-<line x1="6" x2="18" y1="6" y2="18"></line>
-</svg>
-                Cerrar
-            </button>
-<button class="preview-button" id="save-image">
-<svg class="preview-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-<polyline points="17 21 17 13 7 13 7 21"></polyline>
-<polyline points="7 3 7 8 15 8"></polyline>
-</svg>
-                Guardar
-            </button>
-<button class="preview-button" id="share-image">
-<svg class="preview-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-<circle cx="18" cy="5" r="3"></circle>
-<circle cx="6" cy="12" r="3"></circle>
-<circle cx="18" cy="19" r="3"></circle>
-<line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line>
-<line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
-</svg>
-                Compartir
-            </button>
-</div>
-</div>
-<div class="tutorial-overlay" id="tutorial-overlay" style="display: none;">
-<div class="tutorial-content">
-<h2 class="tutorial-title">Bienvenido a la App AR</h2>
-<div class="tutorial-step">
-<div class="step-number">1</div>
-<div class="step-text">Pulsa "Iniciar AR" y apunta a una superficie plana.</div>
-</div>
-<div class="tutorial-step">
-<div class="step-number">2</div>
-<div class="step-text">Toca la pantalla para colocar el objeto 3D.</div>
-</div>
-<div class="tutorial-step">
-<div class="step-number">3</div>
-<div class="step-text">Usa los controles para cambiar de modelo, escalar y rotar.</div>
-</div>
-<div class="tutorial-step">
-<div class="step-number">4</div>
-<div class="step-text">Puedes pellizcar con dos dedos para escalar y deslizar con un dedo para rotar.</div>
-</div>
-<div class="tutorial-step">
-<div class="step-number">5</div>
-<div class="step-text">Usa el botón de la esquina superior derecha para ocultar/mostrar controles.</div>
-</div>
-<div class="tutorial-step">
-<div class="step-number">6</div>
-<div class="step-text">Pulsa el botón de cámara para tomar una captura y guardarla o compartirla.</div>
-</div>
-<button class="tutorial-button" id="close-tutorial">Entendido</button>
-</div>
-</div>
-<div class="loading-indicator" id="loading-indicator" style="display: none;">
-<div class="spinner"></div>
-<div class="loading-text">Cargando...</div>
-</div>
-<div class="tooltip" id="tooltip" style="display: none;"></div>
-<script>
-        // Clase para gestionar los filtros de imágenes
-        class ARImageFilters {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.filters = {
-                    normal: (imageData) => imageData,
-                    grayscale: this.grayscaleFilter.bind(this),
-                    sepia: this.sepiaFilter.bind(this),
-                    vintage: this.vintageFilter.bind(this),
-                    neon: this.neonFilter.bind(this),
-                    blueprint: this.blueprintFilter.bind(this)
-                };
-                this.currentFilter = 'normal';
-                this.filterThumbnails = {};
-            }
-            
-            setFilter(filterName) {
-                if (this.filters[filterName]) {
-                    this.currentFilter = filterName;
-                    return true;
-                }
-                return false;
-            }
-            
-            processImage(sourceCanvas) {
-                // Redimensionar el canvas si es necesario
-                if (this.canvas.width !== sourceCanvas.width || this.canvas.height !== sourceCanvas.height) {
-                    this.canvas.width = sourceCanvas.width;
-                    this.canvas.height = sourceCanvas.height;
-                }
-                
-                // Copiar la imagen original al canvas
-                this.ctx.drawImage(sourceCanvas, 0, 0);
-                
-                // Obtener los datos de la imagen
-                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-                
-                // Aplicar el filtro actual
-                const processedData = this.filters[this.currentFilter](imageData);
-                
-                // Dibujar la imagen procesada
-                this.ctx.putImageData(processedData, 0, 0);
-                
-                return this.canvas;
-            }
-            
-            createFilterThumbnail(sourceCanvas, filterName, width = 60, height = 60) {
-                // Crear un canvas para el thumbnail
-                const thumbnailCanvas = document.createElement('canvas');
-                thumbnailCanvas.width = width;
-                thumbnailCanvas.height = height;
-                const ctx = thumbnailCanvas.getContext('2d');
-                
-                // Redimensionar y dibujar la imagen original
-                ctx.drawImage(sourceCanvas, 0, 0, width, height);
-                
-                // Obtener los datos de la imagen
-                const imageData = ctx.getImageData(0, 0, width, height);
-                
-                // Aplicar el filtro
-                if (this.filters[filterName]) {
-                    const processedData = this.filters[filterName](imageData);
-                    ctx.putImageData(processedData, 0, 0);
-                }
-                
-                return thumbnailCanvas;
-            }
-            
-            grayscaleFilter(imageData) {
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    data[i] = avg;     // R
-                    data[i + 1] = avg; // G
-                    data[i + 2] = avg; // B
-                }
-                return imageData;
-            }
-            
-            sepiaFilter(imageData) {
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    
-                    data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
-                    data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
-                    data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
-                }
-                return imageData;
-            }
-            
-            vintageFilter(imageData) {
-                // Primero aplicamos sepia
-                let sepiaData = this.sepiaFilter(Object.assign({}, imageData));
-                const data = sepiaData.data;
-                
-                // Añadir viñeteado
-                const w = imageData.width;
-                const h = imageData.height;
-                const centerX = w / 2;
-                const centerY = h / 2;
-                const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
-                
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        const i = (y * w + x) * 4;
-                        const dx = x - centerX;
-                        const dy = y - centerY;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        const factor = 1 - Math.pow(dist / maxDist, 2) * 0.5;
-                        
-                        data[i] = data[i] * factor;
-                        data[i + 1] = data[i + 1] * factor;
-                        data[i + 2] = data[i + 2] * factor;
-                    }
-                }
-                
-                return sepiaData;
-            }
-            
-            neonFilter(imageData) {
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    data[i] = Math.min(255, data[i] * 1.5);       // Aumentar rojos
-                    data[i + 2] = Math.min(255, data[i + 2] * 2); // Aumentar azules
-                    // Añadir contraste
-                    data[i] = data[i] > 128 ? data[i] + 20 : data[i] - 20;
-                    data[i + 1] = data[i + 1] > 128 ? data[i + 1] + 10 : data[i + 1] - 10;
-                    data[i + 2] = data[i + 2] > 128 ? data[i + 2] + 30 : data[i + 2] - 30;
-                }
-                return imageData;
-            }
-            
-            blueprintFilter(imageData) {
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    // Primero convertimos a escala de grises
-                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    
-                    // Invertimos y aplicamos tinte azul
-                    data[i] = 255 - avg * 0.2;     // Casi no rojo
-                    data[i + 1] = 255 - avg * 0.5; // Algo de verde
-                    data[i + 2] = 255;             // Máximo azul
-                }
-                return imageData;
-            }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aplicación AR Simplificada</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: Arial, sans-serif;
         }
         
+        body {
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .ui-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .ar-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        
+        .ar-button:active {
+            transform: scale(0.95);
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 90vw;
+            transition: all 0.3s ease;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin: 0 5px;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #555;
+            text-align: center;
+        }
+        
+        .control-button {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-button:active {
+            background-color: #ddd;
+        }
+        
+        .toggle-ui-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .toggle-ui-button:active {
+            transform: scale(0.95);
+        }
+        
+        .toggle-ui-icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Tutorial styles */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .tutorial-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        
+        .tutorial-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .tutorial-step {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .step-text {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .tutorial-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+            align-self: center;
+        }
+        
+        /* Loading indicator */
+        .loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        .loading-text {
+            color: white;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ar-canvas"></canvas>
+    
+    <div class="ui-container" id="ui-container">
+        <button id="start-ar" class="ar-button">Iniciar AR</button>
+        <div id="control-panel" class="control-panel" style="display: none;">
+            <div class="control-row">
+                <div class="control-group">
+                    <div class="control-label">Modelo</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="prev-model">◀</button>
+                        <button class="control-button" id="next-model" style="margin-left: 5px;">▶</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Escala</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="scale-down">−</button>
+                        <button class="control-button" id="scale-up" style="margin-left: 5px;">+</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Rotación</div>
+                    <div style="display: flex;">
+                        <button class="control-button" id="rotate-left">↺</button>
+                        <button class="control-button" id="rotate-right" style="margin-left: 5px;">↻</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="toggle-ui-button" id="toggle-ui">
+        <svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+    </button>
+    
+    <div id="tutorial-overlay" class="tutorial-overlay" style="display: none;">
+        <div class="tutorial-content">
+            <h2 class="tutorial-title">Bienvenido a la App AR</h2>
+            <div class="tutorial-step">
+                <div class="step-number">1</div>
+                <div class="step-text">Pulsa "Iniciar AR" y apunta a una superficie plana.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">2</div>
+                <div class="step-text">Toca la pantalla para colocar el objeto 3D.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">3</div>
+                <div class="step-text">Usa los controles para cambiar de modelo, escalar y rotar.</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">4</div>
+                <div class="step-text">Usa el botón de la esquina superior derecha para ocultar/mostrar controles.</div>
+            </div>
+            <button class="tutorial-button" id="close-tutorial">Entendido</button>
+        </div>
+    </div>
+    
+    <div class="loading-indicator" id="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <div class="loading-text">Cargando...</div>
+    </div>
+    
+    <script>
         // Aplicación principal
         class ARApplication {
             constructor() {
@@ -279,17 +310,9 @@
                 this.controlPanel = document.getElementById('control-panel');
                 this.uiContainer = document.getElementById('ui-container');
                 this.toggleUIButton = document.getElementById('toggle-ui');
-                this.takePhotoButton = document.getElementById('take-photo');
-                this.capturePreview = document.getElementById('capture-preview');
-                this.previewImage = document.getElementById('preview-image');
-                this.closePreviewButton = document.getElementById('close-preview');
-                this.saveImageButton = document.getElementById('save-image');
-                this.shareImageButton = document.getElementById('share-image');
-                this.filtersContainer = document.getElementById('filters-container');
                 this.tutorialOverlay = document.getElementById('tutorial-overlay');
                 this.closeTutorialButton = document.getElementById('close-tutorial');
                 this.loadingIndicator = document.getElementById('loading-indicator');
-                this.tooltip = document.getElementById('tooltip');
                 
                 this.canvas = document.getElementById('ar-canvas');
                 this.gl = null;
@@ -314,13 +337,6 @@
                 
                 this.uiVisible = true;
                 this.scale = 1.0;
-                this.filterProcessor = null;
-                this.captureCanvas = document.createElement('canvas');
-                this.filterCanvas = document.createElement('canvas');
-                this.currentFilter = 'normal';
-                
-                // Inicializar gestos
-                this.hammerManager = null;
                 
                 // Verificar si es la primera visita
                 this.isFirstVisit = !localStorage.getItem('ar-app-visited');
@@ -338,9 +354,6 @@
                 
                 // Inicializar Three.js
                 this.initThreeJS();
-                
-                // Inicializar filtros
-                this.filterProcessor = new ARImageFilters(this.filterCanvas);
                 
                 // Configurar eventos
                 this.setupEventListeners();
@@ -406,50 +419,16 @@
                 // Botón de alternancia de UI
                 this.toggleUIButton.addEventListener('click', () => this.toggleUI());
                 
-                // Botón de captura de pantalla
-                this.takePhotoButton.addEventListener('click', () => this.captureScreen());
-                
-                // Botones de previsualización
-                this.closePreviewButton.addEventListener('click', () => this.closePreview());
-                this.saveImageButton.addEventListener('click', () => this.saveImage());
-                this.shareImageButton.addEventListener('click', () => this.shareImage());
-                
                 // Cerrar tutorial
                 this.closeTutorialButton.addEventListener('click', () => {
                     this.tutorialOverlay.style.display = 'none';
                 });
-                
-                // Tooltips para botones
-                this.addTooltip(this.toggleUIButton, 'Mostrar/Ocultar controles');
-                this.addTooltip(this.takePhotoButton, 'Tomar captura');
                 
                 // Gestionar eventos de pantalla táctil
                 this.canvas.addEventListener('touchstart', (event) => {
                     if (this.session && !this.objectPlaced) {
                         this.handleTouchStart(event);
                     }
-                });
-            }
-            
-            addTooltip(element, text) {
-                element.addEventListener('mouseover', (e) => {
-                    this.tooltip.textContent = text;
-                    this.tooltip.style.display = 'block';
-                    this.tooltip.style.opacity = '1';
-                    this.tooltip.style.left = `${e.clientX + 10}px`;
-                    this.tooltip.style.top = `${e.clientY + 10}px`;
-                });
-                
-                element.addEventListener('mousemove', (e) => {
-                    this.tooltip.style.left = `${e.clientX + 10}px`;
-                    this.tooltip.style.top = `${e.clientY + 10}px`;
-                });
-                
-                element.addEventListener('mouseout', () => {
-                    this.tooltip.style.opacity = '0';
-                    setTimeout(() => {
-                        this.tooltip.style.display = 'none';
-                    }, 300);
                 });
             }
             
@@ -491,15 +470,11 @@
                     // Ocultar botón de inicio y mostrar controles
                     this.arButton.style.display = 'none';
                     this.controlPanel.style.display = 'block';
-                    this.takePhotoButton.style.display = 'block';
                     
                     // Configurar loop de renderizado
                     this.session.requestAnimationFrame((time, frame) => {
                         this.onXRFrame(time, frame);
                     });
-                    
-                    // Inicializar gestos una vez que la escena AR está activa
-                    this.initGestures();
                     
                     this.showLoading(false);
                 } catch (err) {
@@ -522,7 +497,6 @@
                 // Restablecer la UI
                 this.arButton.style.display = 'block';
                 this.controlPanel.style.display = 'none';
-                this.takePhotoButton.style.display = 'none';
                 this.objectPlaced = false;
                 
                 // Limpiar la escena
@@ -591,63 +565,6 @@
                     // Colocar objeto
                     this.placeObject();
                 }
-            }
-            
-            initGestures() {
-                // Inicializar Hammer.js para gestos
-                this.hammerManager = new Hammer.Manager(this.canvas);
-                
-                // Reconocedor de pellizco para escalar
-                const pinch = new Hammer.Pinch();
-                this.hammerManager.add(pinch);
-                
-                // Reconocedor de rotación
-                const rotate = new Hammer.Rotate();
-                rotate.recognizeWith(pinch); // Reconocer rotación durante pellizco
-                this.hammerManager.add(rotate);
-                
-                // Reconocedor de deslizamiento para rotar
-                const pan = new Hammer.Pan({ threshold: 10, direction: Hammer.DIRECTION_ALL });
-                this.hammerManager.add(pan);
-                
-                // Variables para gestos
-                let lastScale = 1;
-                let lastRotation = 0;
-                
-                // Eventos de gestos
-                this.hammerManager.on('pinch', (ev) => {
-                    if (this.objectPlaced && this.currentObject) {
-                        const scaleFactor = ev.scale / lastScale;
-                        this.scaleObject(scaleFactor);
-                        lastScale = ev.scale;
-                    }
-                });
-                
-                this.hammerManager.on('pinchend', () => {
-                    lastScale = 1;
-                });
-                
-                this.hammerManager.on('rotate', (ev) => {
-                    if (this.objectPlaced && this.currentObject) {
-                        const rotation = ev.rotation - lastRotation;
-                        this.rotateObject(rotation * Math.PI / 180);
-                        lastRotation = ev.rotation;
-                    }
-                });
-                
-                this.hammerManager.on('rotateend', () => {
-                    lastRotation = 0;
-                });
-                
-                this.hammerManager.on('pan', (ev) => {
-                    if (this.objectPlaced && this.currentObject && ev.pointerType === 'touch') {
-                        // Convertir movimiento horizontal a rotación en Y
-                        const rotationY = (ev.deltaX * 0.01);
-                        
-                        // Aplicar rotación
-                        this.currentObject.rotation.y += rotationY;
-                    }
-                });
             }
             
             placeObject() {
@@ -731,165 +648,6 @@
                 this.toggleUIButton.innerHTML = this.uiVisible ? 
                     '<svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16m-7 6h7"></path></svg>' : 
                     '<svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
-            }
-            
-            async captureScreen() {
-                // Ocultar UI para la captura
-                const wasVisible = this.uiVisible;
-                if (wasVisible) {
-                    this.uiVisible = false;
-                    this.uiContainer.style.opacity = '0';
-                    this.toggleUIButton.style.opacity = '0';
-                    this.takePhotoButton.style.opacity = '0';
-                }
-                
-                // Esperar un momento para que la UI se oculte completamente
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                // Capturar el frame actual
-                if (!this.session) return;
-                
-                // Usar XRFrame.captureScreen() (API hipotética) o simplemente capturar el canvas
-                this.captureCanvas.width = this.canvas.width;
-                this.captureCanvas.height = this.canvas.height;
-                const ctx = this.captureCanvas.getContext('2d');
-                ctx.drawImage(this.canvas, 0, 0);
-                
-                // Crear miniaturas de filtros
-                this.createFilterThumbnails();
-                
-                // Mostrar previsualización con filtro actual
-                this.applyFilterAndUpdatePreview();
-                
-                // Mostrar la previsualización
-                this.capturePreview.style.display = 'flex';
-                
-                // Restaurar UI
-                if (wasVisible) {
-                    this.uiVisible = true;
-                    this.uiContainer.style.opacity = '1';
-                    this.toggleUIButton.style.opacity = '1';
-                    this.takePhotoButton.style.opacity = '1';
-                }
-            }
-            
-            createFilterThumbnails() {
-                // Limpiar contenedor de filtros
-                this.filtersContainer.innerHTML = '';
-                
-                // Crear un thumbnail para cada filtro
-                Object.keys(this.filterProcessor.filters).forEach(filterName => {
-                    // Crear thumbnail con el filtro aplicado
-                    const thumbnailCanvas = this.filterProcessor.createFilterThumbnail(this.captureCanvas, filterName);
-                    
-                    // Crear elemento de UI para el filtro
-                    const filterOption = document.createElement('div');
-                    filterOption.className = 'filter-option';
-                    
-                    const thumbnailContainer = document.createElement('div');
-                    thumbnailContainer.className = `filter-thumbnail ${filterName === this.currentFilter ? 'active' : ''}`;
-                    thumbnailContainer.appendChild(thumbnailCanvas);
-                    
-                    const filterLabel = document.createElement('div');
-                    filterLabel.className = 'filter-label';
-                    filterLabel.textContent = this.getFilterDisplayName(filterName);
-                    
-                    filterOption.appendChild(thumbnailContainer);
-                    filterOption.appendChild(filterLabel);
-                    
-                    // Añadir evento al hacer clic
-                    filterOption.addEventListener('click', () => {
-                        this.currentFilter = filterName;
-                        
-                        // Actualizar clase activa
-                        document.querySelectorAll('.filter-thumbnail').forEach(el => {
-                            el.classList.remove('active');
-                        });
-                        thumbnailContainer.classList.add('active');
-                        
-                        // Aplicar filtro
-                        this.applyFilterAndUpdatePreview();
-                    });
-                    
-                    this.filtersContainer.appendChild(filterOption);
-                });
-            }
-            
-            getFilterDisplayName(filterName) {
-                const displayNames = {
-                    'normal': 'Normal',
-                    'grayscale': 'B&N',
-                    'sepia': 'Sepia',
-                    'vintage': 'Retro',
-                    'neon': 'Neón',
-                    'blueprint': 'Plano'
-                };
-                
-                return displayNames[filterName] || filterName;
-            }
-            
-            applyFilterAndUpdatePreview() {
-                // Aplicar el filtro seleccionado
-                this.filterProcessor.setFilter(this.currentFilter);
-                const filteredCanvas = this.filterProcessor.processImage(this.captureCanvas);
-                
-                // Actualizar la imagen de previsualización
-                this.previewImage.src = filteredCanvas.toDataURL('image/png');
-            }
-            
-            closePreview() {
-                this.capturePreview.style.display = 'none';
-            }
-            
-            saveImage() {
-                // Crear un enlace de descarga
-                const link = document.createElement('a');
-                link.download = `ar-capture-${Date.now()}.png`;
-                link.href = this.previewImage.src;
-                link.click();
-                
-                // Cerrar previsualización después de guardar
-                setTimeout(() => {
-                    this.closePreview();
-                    this.showToast('Imagen guardada correctamente');
-                }, 500);
-            }
-            
-            async shareImage() {
-                // Comprobar si la API Web Share está disponible
-                if (navigator.share) {
-                    try {
-                        // Convertir la URL de datos a un blob
-                        const response = await fetch(this.previewImage.src);
-                        const blob = await response.blob();
-                        const file = new File([blob], `ar-capture-${Date.now()}.png`, { type: 'image/png' });
-                        
-                        // Compartir archivo
-                        await navigator.share({
-                            title: 'Mi captura AR',
-                            text: 'Mira esta imagen de realidad aumentada que he creado',
-                            files: [file]
-                        });
-                        
-                        // Cerrar previsualización después de compartir
-                        this.closePreview();
-                    } catch (error) {
-                        console.error('Error al compartir:', error);
-                        
-                        // Si falló la compartición de archivos, intentar con solo texto y URL
-                        try {
-                            await navigator.share({
-                                title: 'Mi captura AR',
-                                text: 'Mira esta imagen de realidad aumentada que he creado'
-                            });
-                            this.closePreview();
-                        } catch (err) {
-                            this.showToast('Error al compartir la imagen');
-                        }
-                    }
-                } else {
-                    this.showToast('Compartir no está disponible en tu dispositivo');
-                }
             }
             
             showToast(message, duration = 2000) {
@@ -996,5 +754,5 @@
             const app = new ARApplication();
         });
     </script>
-<script src="main.js"></script></body>
+</body>
 </html>
