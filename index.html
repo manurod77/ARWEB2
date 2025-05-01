@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aplicación AR Simplificada</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Aplicación AR Simplificada</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -236,72 +237,67 @@
     </style>
 </head>
 <body>
-    <canvas id="ar-canvas"></canvas>
-    
-    <div class="ui-container" id="ui-container">
-        <button id="start-ar" class="ar-button">Iniciar AR</button>
-        <div id="control-panel" class="control-panel" style="display: none;">
-            <div class="control-row">
-                <div class="control-group">
-                    <div class="control-label">Modelo</div>
-                    <div style="display: flex;">
-                        <button class="control-button" id="prev-model">◀</button>
-                        <button class="control-button" id="next-model" style="margin-left: 5px;">▶</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Escala</div>
-                    <div style="display: flex;">
-                        <button class="control-button" id="scale-down">−</button>
-                        <button class="control-button" id="scale-up" style="margin-left: 5px;">+</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Rotación</div>
-                    <div style="display: flex;">
-                        <button class="control-button" id="rotate-left">↺</button>
-                        <button class="control-button" id="rotate-right" style="margin-left: 5px;">↻</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <button class="toggle-ui-button" id="toggle-ui">
-        <svg class="toggle-ui-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 6h16M4 12h16m-7 6h7"></path>
-        </svg>
-    </button>
-    
-    <div id="tutorial-overlay" class="tutorial-overlay" style="display: none;">
-        <div class="tutorial-content">
-            <h2 class="tutorial-title">Bienvenido a la App AR</h2>
-            <div class="tutorial-step">
-                <div class="step-number">1</div>
-                <div class="step-text">Pulsa "Iniciar AR" y apunta a una superficie plana.</div>
-            </div>
-            <div class="tutorial-step">
-                <div class="step-number">2</div>
-                <div class="step-text">Toca la pantalla para colocar el objeto 3D.</div>
-            </div>
-            <div class="tutorial-step">
-                <div class="step-number">3</div>
-                <div class="step-text">Usa los controles para cambiar de modelo, escalar y rotar.</div>
-            </div>
-            <div class="tutorial-step">
-                <div class="step-number">4</div>
-                <div class="step-text">Usa el botón de la esquina superior derecha para ocultar/mostrar controles.</div>
-            </div>
-            <button class="tutorial-button" id="close-tutorial">Entendido</button>
-        </div>
-    </div>
-    
-    <div class="loading-indicator" id="loading-indicator" style="display: none;">
-        <div class="spinner"></div>
-        <div class="loading-text">Cargando...</div>
-    </div>
-    
-    <script>
+<canvas id="ar-canvas"></canvas>
+<div class="ui-container" id="ui-container">
+<button class="ar-button" id="start-ar">Iniciar AR</button>
+<div class="control-panel" id="control-panel" style="display: none;">
+<div class="control-row">
+<div class="control-group">
+<div class="control-label">Modelo</div>
+<div style="display: flex;">
+<button class="control-button" id="prev-model">◀</button>
+<button class="control-button" id="next-model" style="margin-left: 5px;">▶</button>
+</div>
+</div>
+<div class="control-group">
+<div class="control-label">Escala</div>
+<div style="display: flex;">
+<button class="control-button" id="scale-down">−</button>
+<button class="control-button" id="scale-up" style="margin-left: 5px;">+</button>
+</div>
+</div>
+<div class="control-group">
+<div class="control-label">Rotación</div>
+<div style="display: flex;">
+<button class="control-button" id="rotate-left">↺</button>
+<button class="control-button" id="rotate-right" style="margin-left: 5px;">↻</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<button class="toggle-ui-button" id="toggle-ui">
+<svg class="toggle-ui-icon" fill="none" stroke="#333" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 6h16M4 12h16m-7 6h7"></path>
+</svg>
+</button>
+<div class="tutorial-overlay" id="tutorial-overlay" style="display: none;">
+<div class="tutorial-content">
+<h2 class="tutorial-title">Bienvenido a la App AR</h2>
+<div class="tutorial-step">
+<div class="step-number">1</div>
+<div class="step-text">Pulsa "Iniciar AR" y apunta a una superficie plana.</div>
+</div>
+<div class="tutorial-step">
+<div class="step-number">2</div>
+<div class="step-text">Toca la pantalla para colocar el objeto 3D.</div>
+</div>
+<div class="tutorial-step">
+<div class="step-number">3</div>
+<div class="step-text">Usa los controles para cambiar de modelo, escalar y rotar.</div>
+</div>
+<div class="tutorial-step">
+<div class="step-number">4</div>
+<div class="step-text">Usa el botón de la esquina superior derecha para ocultar/mostrar controles.</div>
+</div>
+<button class="tutorial-button" id="close-tutorial">Entendido</button>
+</div>
+</div>
+<div class="loading-indicator" id="loading-indicator" style="display: none;">
+<div class="spinner"></div>
+<div class="loading-text">Cargando...</div>
+</div>
+<script>
         // Aplicación principal
         class ARApplication {
             constructor() {
